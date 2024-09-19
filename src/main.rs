@@ -4,9 +4,10 @@ mod virtual_machine;
 extern crate sdl2;
 
 use clap::Parser;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode::Insert;
 use sdl2::pixels::Color;
 use crate::rendering::Renderer;
 use crate::virtual_machine::VirtualMachine;
@@ -16,8 +17,8 @@ use crate::virtual_machine::VirtualMachine;
 struct Cli {
 	#[arg(help = "the binary file to load into memory")]
 	program: std::path::PathBuf,
-	#[arg(short, long, help = "target frequency of the emulator")]
-	frequency: Option<usize>
+	#[arg(short, long, help = "target frequency of the emulator, in Hz. emulator will run slightly slower than this.")]
+	frequency: Option<u32>
 }
 
 fn main() {
@@ -36,10 +37,16 @@ fn main() {
 		Ok(p) => p,
 		Err(e) => panic!("Unable to read binary. Error: {}", e)
 	};
-	vm.load_program(program);	
+	vm.load_program(program);
+	
+	let do_sleep = cli.frequency.is_some();
+	let sleep_time = if do_sleep {
+		Duration::new(0, 1_000_000_000 / cli.frequency.unwrap())
+	} else { Duration::ZERO	};
 
 	let mut perf_timer = Instant::now();
 	let mut perf_counter: u64 = 0;
+	let mut cycle_timer = Instant::now();
 	let mut event_pump = sdl_context.event_pump().unwrap();
 	// here we go!
 	'running: loop {
@@ -64,7 +71,13 @@ fn main() {
 			renderer.canvas.present();
 		}
 		
-		// std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+		// run at roughly target frequency
+		if do_sleep {
+			std::thread::sleep(sleep_time.saturating_sub(cycle_timer.elapsed()));
+			cycle_timer = Instant::now();
+		}		
+		
+		// update window title with 500ms average clock rate
 		perf_counter += 1;
 		if perf_timer.elapsed().as_millis() > 500 {
 			let freq = perf_counter as f64 / perf_timer.elapsed().as_secs_f64();

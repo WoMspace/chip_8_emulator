@@ -82,7 +82,7 @@ impl VirtualMachine {
 	
 	pub fn cycle(&mut self) {
 		let opcode = self.fetch_decode();
-		// println!("PC:{:04X} I:{:01X} Il:{:04X}", self.program_counter, opcode.i, opcode.instruction);
+		println!("PC:{:04X} I:{:01X} Il:{:04X}", self.program_counter, opcode.i, opcode.instruction);
 		self.program_counter += 2;
 		self.execute(opcode);
 	}
@@ -267,30 +267,28 @@ impl VirtualMachine {
 
 	fn op_8xy5(&mut self, opcode: Opcode) {
 		// SUB Vx, Vy: subtract register Vy from Vx, storing result in Vx. if Vx > Vy, set VF to 1, otherwise 0
-		let (result, flag) = self.registers[opcode.x as usize].overflowing_sub(self.registers[opcode.y as usize]);
+		let (result, not_flag) = self.registers[opcode.x as usize].overflowing_sub(self.registers[opcode.y as usize]);
 		self.registers[opcode.x as usize] = result;
-		self.registers[0xF] = if flag { 1 } else { 0 };
+		self.registers[0xF] = if not_flag { 0 } else { 1 };
 	}
 
 	fn op_8xy6(&mut self, opcode: Opcode) {
-		// SHR Vx {, Vy}: store the value in register Vx in Vy, then right shift register Vx by one, storing the lost bit in VF
-		self.registers[opcode.y as usize] = self.registers[opcode.x as usize];
-		self.registers[opcode.x as usize] >>= 1;
-		self.registers[0xF] = self.registers[opcode.y as usize] & 0x0001;
+		// SHR Vx ,Vy: store the value in register Vy in Vx, then right shift register Vx by one, storing the lost bit in VF
+		self.registers[0xF] = self.registers[opcode.y as usize] & 0x1;
+		self.registers[opcode.x as usize] = self.registers[opcode.y as usize] >> 1;
 	}
 
 	fn op_8xy7(&mut self, opcode: Opcode) {
 		// SUBN Vx, Vy: subtract register Vx from Vy, storing result in Vx. if Vy > Vx, set VF to 1, otherwise 0		
-		let (result, flag) = self.registers[opcode.y as usize].overflowing_sub(self.registers[opcode.x as usize]);
+		let (result, not_flag) = self.registers[opcode.y as usize].overflowing_sub(self.registers[opcode.x as usize]);
 		self.registers[opcode.x as usize] = result;
-		self.registers[0xF] = if flag { 1 } else { 0 }
+		self.registers[0xF] = if not_flag { 0 } else { 1 }
 	}
 
 	fn op_8xyE(&mut self, opcode: Opcode) {
-		// SHL Vx {, Vy} // store the value in register Vx in Vy, then left shift register Vx by one, storing the lost bit in VF
-		self.registers[opcode.y as usize] = self.registers[opcode.x as usize];
-		self.registers[opcode.x as usize] <<= 1;
-		self.registers[0xF] = (self.registers[opcode.y as usize] & 0x0080) >> 7;
+		// SHL Vx, Vy // store the value in register Vy in Vx, then left shift register Vx by one, storing the lost bit in VF
+		self.registers[0xF] = (self.registers[opcode.y as usize] & 0x80) >> 7;
+		self.registers[opcode.x as usize] = self.registers[opcode.y as usize] << 1;
 	}
 
 	fn op_9xy0(&mut self, opcode: Opcode) {
