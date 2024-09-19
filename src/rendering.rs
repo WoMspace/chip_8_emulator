@@ -1,9 +1,8 @@
 use sdl2::rect::Point;
 use sdl2::render::WindowCanvas;
-use sdl2::{Sdl, VideoSubsystem};
+use sdl2::Sdl;
 
 pub struct Renderer {
-	pub video_subsystem: VideoSubsystem,
 	pub canvas: WindowCanvas,
 }
 
@@ -15,11 +14,13 @@ impl Renderer {
 			.position_centered()
 			.build()
 			.unwrap();
-		let mut canvas = window.into_canvas().accelerated().build().unwrap();
+		let mut canvas = window.into_canvas()
+			.accelerated()
+			.build()
+			.unwrap();
 		let _ = canvas.set_logical_size(64, 32);
 
 		Renderer {
-			video_subsystem,
 			canvas,
 		}
 	}
