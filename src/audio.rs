@@ -1,5 +1,5 @@
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
-use sdl2::{AudioSubsystem, Sdl};
+use sdl2::Sdl;
 
 struct SquareWave {
 	phase_inc: f32,
@@ -24,7 +24,6 @@ impl AudioCallback for SquareWave {
 }
 
 pub struct AudioPlayer {
-	pub audio_subsystem: AudioSubsystem,
 	audio_device: AudioDevice<SquareWave>
 }
 
@@ -44,7 +43,6 @@ impl AudioPlayer {
 			}
 		}).unwrap();
 		AudioPlayer {
-			audio_subsystem,
 			audio_device: device
 		}
 	}
