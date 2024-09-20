@@ -1,5 +1,6 @@
 mod rendering;
 mod virtual_machine;
+mod audio;
 
 extern crate sdl2;
 
@@ -8,6 +9,7 @@ use std::time::{Duration, Instant};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+use crate::audio::AudioPlayer;
 use crate::rendering::Renderer;
 use crate::virtual_machine::VirtualMachine;
 
@@ -35,6 +37,8 @@ fn main() {
 	if cli.colour.is_some() {
 		renderer.get_colors(cli.colour.unwrap().as_str());
 	}
+	
+	let mut audio_player = AudioPlayer::build(&sdl_context);
 	
 	let mut vm = VirtualMachine::build();
 	vm.debug_level = cli.debug;
@@ -68,6 +72,11 @@ fn main() {
 		}
 		
 		vm.cycle();
+		if vm.sound_timer > 0 {
+			audio_player.play()
+		} else {
+			audio_player.pause()
+		}
 		
 		if vm.update_display {
 			renderer.draw_video_memory(vm.video_memory);
@@ -79,7 +88,6 @@ fn main() {
 			let mut resume = false;
 			while !resume {
 				resume = cycle_timer.elapsed() >= sleep_time;
-				// hint::spin_loop();
 			}
 			cycle_timer = Instant::now();
 		}
