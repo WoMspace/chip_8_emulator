@@ -17,6 +17,7 @@ pub struct VirtualMachine {
 	rng: ThreadRng,
 	pub update_display: bool,
 	pub debug_level: u8,
+	last_draw: Instant
 }
 
 struct Opcode {
@@ -46,6 +47,7 @@ impl VirtualMachine {
 			rng: thread_rng(),
 			update_display: false,
 			debug_level: 0,
+			last_draw: Instant::now(),
 		};
 		// copy font into memory
 		for (i, byte) in VirtualMachine::FONT.iter().enumerate() {
@@ -295,9 +297,9 @@ impl VirtualMachine {
 
 	fn op_8xy5(&mut self, opcode: Opcode) {
 		// SUB Vx, Vy: subtract register Vy from Vx, storing result in Vx. if Vx > Vy, set VF to 1, otherwise 0
-		let (result, not_flag) = self.registers[opcode.x as usize].overflowing_sub(self.registers[opcode.y as usize]);
+		let (result, flag) = self.registers[opcode.x as usize].overflowing_sub(self.registers[opcode.y as usize]);
 		self.registers[opcode.x as usize] = result;
-		self.registers[0xF] = if not_flag { 0 } else { 1 };
+		self.registers[0xF] = if !flag { 1 } else { 0 };
 	}
 
 	fn op_8xy6(&mut self, opcode: Opcode) {
@@ -308,9 +310,9 @@ impl VirtualMachine {
 
 	fn op_8xy7(&mut self, opcode: Opcode) {
 		// SUBN Vx, Vy: subtract register Vx from Vy, storing result in Vx. if Vy > Vx, set VF to 1, otherwise 0		
-		let (result, not_flag) = self.registers[opcode.y as usize].overflowing_sub(self.registers[opcode.x as usize]);
+		let (result, flag) = self.registers[opcode.y as usize].overflowing_sub(self.registers[opcode.x as usize]);
 		self.registers[opcode.x as usize] = result;
-		self.registers[0xF] = if not_flag { 0 } else { 1 }
+		self.registers[0xF] = if !flag { 1 } else { 0 }
 	}
 
 	fn op_8xyE(&mut self, opcode: Opcode) {
@@ -344,6 +346,12 @@ impl VirtualMachine {
 	fn op_Dxyn(&mut self, opcode: Opcode) {
 		// DRW Vx, Vy, nibble: display an n-byte sprite - starting at index register - at location Vx, Vy. if any pixels are XORed off, flag register VF is set to 1, otherwise 0
 		// sprite starting position should wrap, but sprites themselves should clip
+		// maximum 60 sprite draws per second
+		const VERT_SYNC: Duration = Duration::from_nanos(1_000_000_000 / 60);
+		if self.last_draw.elapsed() < VERT_SYNC {
+			std::thread::sleep(VERT_SYNC - self.last_draw.elapsed());
+		}
+		self.last_draw = Instant::now();
 		self.update_display = true;
 		let x = self.registers[opcode.x as usize] % 64;
 		let y = self.registers[opcode.y as usize] % 32;
