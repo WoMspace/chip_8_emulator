@@ -1,3 +1,5 @@
+// Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
+
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use sdl2::Sdl;
 

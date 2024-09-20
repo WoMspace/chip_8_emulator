@@ -1,3 +1,5 @@
+// Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
+
 mod rendering;
 mod virtual_machine;
 mod audio;

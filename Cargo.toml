@@ -1,7 +1,15 @@
 [package]
 name = "chip_8_emulator"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+
+[[bin]]
+name = "chip8"
+path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = true
 
 [dependencies]
 clap = { version = "4.5.17", features = ["derive"] }

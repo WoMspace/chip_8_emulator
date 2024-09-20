@@ -1,3 +1,5 @@
+// Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
+
 use std::time::{Duration, Instant};
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
@@ -17,7 +19,8 @@ pub struct VirtualMachine {
 	rng: ThreadRng,
 	pub update_display: bool,
 	pub debug_level: u8,
-	last_draw: Instant
+	last_draw: Instant,
+	last_key: Option<u8>,
 }
 
 struct Opcode {
@@ -48,6 +51,7 @@ impl VirtualMachine {
 			update_display: false,
 			debug_level: 0,
 			last_draw: Instant::now(),
+			last_key: None,
 		};
 		// copy font into memory
 		for (i, byte) in VirtualMachine::FONT.iter().enumerate() {
@@ -304,8 +308,9 @@ impl VirtualMachine {
 
 	fn op_8xy6(&mut self, opcode: Opcode) {
 		// SHR Vx ,Vy: store the value in register Vy in Vx, then right shift register Vx by one, storing the lost bit in VF
-		self.registers[0xF] = self.registers[opcode.y as usize] & 0x1;
+		let flag = self.registers[opcode.y as usize] & 0x1;
 		self.registers[opcode.x as usize] = self.registers[opcode.y as usize] >> 1;
+		self.registers[0xF] = flag;
 	}
 
 	fn op_8xy7(&mut self, opcode: Opcode) {
@@ -317,8 +322,9 @@ impl VirtualMachine {
 
 	fn op_8xyE(&mut self, opcode: Opcode) {
 		// SHL Vx, Vy // store the value in register Vy in Vx, then left shift register Vx by one, storing the lost bit in VF
-		self.registers[0xF] = (self.registers[opcode.y as usize] & 0x80) >> 7;
+		let flag = (self.registers[opcode.y as usize] & 0x80) >> 7;
 		self.registers[opcode.x as usize] = self.registers[opcode.y as usize] << 1;
+		self.registers[0xF] = flag;
 	}
 
 	fn op_9xy0(&mut self, opcode: Opcode) {
@@ -349,7 +355,8 @@ impl VirtualMachine {
 		// maximum 60 sprite draws per second
 		const VERT_SYNC: Duration = Duration::from_nanos(1_000_000_000 / 60);
 		if self.last_draw.elapsed() < VERT_SYNC {
-			std::thread::sleep(VERT_SYNC - self.last_draw.elapsed());
+			// std::thread::sleep(VERT_SYNC - self.last_draw.elapsed());
+			while self.last_draw.elapsed() < VERT_SYNC {}
 		}
 		self.last_draw = Instant::now();
 		self.update_display = true;
@@ -396,14 +403,30 @@ impl VirtualMachine {
 	}
 	
 	fn op_Fx0A(&mut self, opcode: Opcode) {
-		// LD Vx, K: block until any keypress, store key in register Vx
-		if self.keys.iter().any(|k| *k){
-			for (id, key) in self.keys.iter().enumerate() {
-				if *key {
-					self.registers[opcode.x as usize] = id as u8;
+		// LD Vx, K: block until any new keypress (and release), store key in register Vx
+		// if we have not yet recieved a new press, loop this instruction until we get one
+		if self.last_key.is_none() {
+			if self.keys.iter().any(|k| *k) {
+				for (id, key) in self.keys.iter().enumerate() {
+					if *key {
+						// self.registers[opcode.x as usize] = id as u8;
+						self.last_key = Some(id as u8);
+						return;
+					}
 				}
+			} else {
+				self.program_counter -= 2;
 			}
-		} else { self.program_counter -= 2 }
+		}
+		// if we have recieved a press but no release, loop this instruction until released
+		if let Some(key) = self.last_key {
+			if !self.keys[key as usize] {
+				self.registers[opcode.x as usize] = key;
+				self.last_key = None;
+			} else {
+				self.program_counter -= 2;
+			}
+		}
 	}
 	
 	fn op_Fx15(&mut self, opcode: Opcode) {

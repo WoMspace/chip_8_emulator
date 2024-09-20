@@ -1,3 +1,5 @@
+// Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
+
 use sdl2::pixels::Color;
 use sdl2::rect::Point;
 use sdl2::render::WindowCanvas;
