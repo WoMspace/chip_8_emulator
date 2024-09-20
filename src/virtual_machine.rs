@@ -17,7 +17,6 @@ pub struct VirtualMachine {
 	rng: ThreadRng,
 	pub update_display: bool,
 	pub debug_level: u8,
-	cycle_counter: usize
 }
 
 struct Opcode {
@@ -47,7 +46,6 @@ impl VirtualMachine {
 			rng: thread_rng(),
 			update_display: false,
 			debug_level: 0,
-			cycle_counter: 1
 		};
 		// copy font into memory
 		for (i, byte) in VirtualMachine::FONT.iter().enumerate() {
@@ -92,7 +90,6 @@ impl VirtualMachine {
 		self.decrement_timers();
 		self.program_counter += 2;
 		self.execute(opcode);
-		self.cycle_counter += 1;
 	}
 	
 	fn print_debug(&mut self, opcode: &Opcode) {
@@ -100,7 +97,7 @@ impl VirtualMachine {
 		let mut output = String::new();
 		if self.debug_level > 0 {
 			// print PC and current instruction
-			output += format!("PC:0x{:04X} I:0x{:04X} C:{}", self.program_counter, opcode.instruction, self.cycle_counter).as_str()
+			output += format!("PC:0x{:04X} I:0x{:04X}", self.program_counter, opcode.instruction).as_str()
 		}
 		if self.debug_level > 1 {
 			// also print index register and regular register
