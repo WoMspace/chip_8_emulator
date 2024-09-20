@@ -1,3 +1,4 @@
+use std::time::{Duration, Instant};
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 use sdl2::keyboard::Keycode;
@@ -10,10 +11,12 @@ pub struct VirtualMachine {
 	stack: Vec<u16>,
 	delay_timer: u8,
 	sound_timer: u8,
+	timer_counter: Instant,
 	registers: [u8; 16],
 	pub keys: [bool; 16],
 	rng: ThreadRng,
 	pub update_display: bool,
+	pub debug_level: u8,
 }
 
 struct Opcode {
@@ -37,17 +40,17 @@ impl VirtualMachine {
 			stack: Vec::new(),
 			delay_timer: 0,
 			sound_timer: 0,
+			timer_counter: Instant::now(),
 			registers: [0; 16],
 			keys: [false; 16],
 			rng: thread_rng(),
 			update_display: false,
+			debug_level: 0,
 		};
-
 		// copy font into memory
 		for (i, byte) in VirtualMachine::FONT.iter().enumerate() {
 			vm.memory[0x50 + i] = *byte;
 		}
-
 		vm
 	}
 	
@@ -82,9 +85,37 @@ impl VirtualMachine {
 	
 	pub fn cycle(&mut self) {
 		let opcode = self.fetch_decode();
-		println!("PC:{:04X} I:{:01X} Il:{:04X}", self.program_counter, opcode.i, opcode.instruction);
+		// println!("PC:{:04X} I:{:01X} Il:{:04X}", self.program_counter, opcode.i, opcode.instruction);
+		self.print_debug(&opcode);
+		self.decrement_timers();
 		self.program_counter += 2;
 		self.execute(opcode);
+	}
+	
+	fn print_debug(&mut self, opcode: &Opcode) {
+		if self.debug_level == 0 { return }
+		let mut output = String::new();
+		if self.debug_level > 0 {
+			// print PC and current instruction
+			output += format!("PC:0x{:04X} I:0x{:04X}", self.program_counter, opcode.instruction).as_str()
+		}
+		if self.debug_level > 1 {
+			// also print index register and regular register
+			output += format!(" rI:{:04X}\nr0:0x{:04X} r1:0x{:04X} r2:0x{:04X} r3:0x{:04X} r4:0x{:04X} r5:0x{:04X} r6:0x{:04X} r7:0x{:04X}\nr8:0x{:04X} r9:0x{:04X} rA:0x{:04X} rB:0x{:04X} rC:0x{:04X} rD:0x{:04X} rE:0x{:04X} rF:0x{:04X}",
+			                  self.index_register, self.registers[0x0], self.registers[0x1], self.registers[0x2], self.registers[0x3], self.registers[0x4],
+			                  self.registers[0x5], self.registers[0x6], self.registers[0x7], self.registers[0x8], self.registers[0x9], self.registers[0xA],
+			                  self.registers[0xB], self.registers[0xC], self.registers[0xD], self.registers[0xE], self.registers[0xF]).as_str()
+		}
+		
+		println!("{output}")
+	}
+	
+	fn decrement_timers(&mut self) {
+		if self.timer_counter.elapsed() > Duration::from_nanos(1_000_000_000 / 60) {
+			self.sound_timer = self.sound_timer.saturating_sub(1);
+			self.delay_timer = self.delay_timer.saturating_sub(1);
+			self.timer_counter = Instant::now();
+		}
 	}
 	
 	fn execute(&mut self, opcode: Opcode) {
@@ -141,47 +172,41 @@ impl VirtualMachine {
 	}
 
 	pub fn handle_keydown(&mut self, keycode: Keycode) {
-		match keycode {
-			Keycode::Num1 => self.keys[0x1] = true,
-			Keycode::Num2 => self.keys[0x2] = true,
-			Keycode::Num3 => self.keys[0x3] = true,
-			Keycode::Num4 => self.keys[0xC] = true,
-			Keycode::Q => self.keys[0x4] = true,
-			Keycode::W => self.keys[0x5] = true,
-			Keycode::E => self.keys[0x6] = true,
-			Keycode::R => self.keys[0xD] = true,
-			Keycode::A => self.keys[0x7] = true,
-			Keycode::S => self.keys[0x8] = true,
-			Keycode::D => self.keys[0x9] = true,
-			Keycode::F => self.keys[0xE] = true,
-			Keycode::Z => self.keys[0xA] = true,
-			Keycode::X => self.keys[0x0] = true,
-			Keycode::C => self.keys[0xB] = true,
-			Keycode::V => self.keys[0xF] = true,
-			_ => {}
-		}
+		if let Keycode::Num1 = keycode { self.keys[0x1] = true	}
+		if let Keycode::Num2 = keycode { self.keys[0x2] = true	}
+		if let Keycode::Num3 = keycode { self.keys[0x3] = true	}
+		if let Keycode::Num4 = keycode { self.keys[0xC] = true	}
+		if let Keycode::Q = keycode { self.keys[0x4] = true	}
+		if let Keycode::W = keycode { self.keys[0x5] = true	}
+		if let Keycode::E = keycode { self.keys[0x6] = true	}
+		if let Keycode::R = keycode { self.keys[0xD] = true	}
+		if let Keycode::A = keycode { self.keys[0x7] = true	}
+		if let Keycode::S = keycode { self.keys[0x8] = true	}
+		if let Keycode::D = keycode { self.keys[0x9] = true	}
+		if let Keycode::F = keycode { self.keys[0xE] = true	}
+		if let Keycode::Z = keycode { self.keys[0xA] = true	}
+		if let Keycode::X = keycode { self.keys[0x0] = true	}
+		if let Keycode::C = keycode { self.keys[0xB] = true	}
+		if let Keycode::V = keycode { self.keys[0xF] = true }
 	}
 
 	pub fn handle_keyup(&mut self, keycode: Keycode) {
-		match keycode {
-			Keycode::Num1 => self.keys[0x1] = false,
-			Keycode::Num2 => self.keys[0x2] = false,
-			Keycode::Num3 => self.keys[0x3] = false,
-			Keycode::Num4 => self.keys[0xC] = false,
-			Keycode::Q => self.keys[0x4] = false,
-			Keycode::W => self.keys[0x5] = false,
-			Keycode::E => self.keys[0x6] = false,
-			Keycode::R => self.keys[0xD] = false,
-			Keycode::A => self.keys[0x7] = false,
-			Keycode::S => self.keys[0x8] = false,
-			Keycode::D => self.keys[0x9] = false,
-			Keycode::F => self.keys[0xE] = false,
-			Keycode::Z => self.keys[0xA] = false,
-			Keycode::X => self.keys[0x0] = false,
-			Keycode::C => self.keys[0xB] = false,
-			Keycode::V => self.keys[0xF] = false,
-			_ => {}
-		}
+		if let Keycode::Num1 = keycode { self.keys[0x1] = false }
+		if let Keycode::Num2 = keycode { self.keys[0x2] = false }
+		if let Keycode::Num3 = keycode { self.keys[0x3] = false }
+		if let Keycode::Num4 = keycode { self.keys[0xC] = false }
+		if let Keycode::Q = keycode { self.keys[0x4] = false }
+		if let Keycode::W = keycode { self.keys[0x5] = false }
+		if let Keycode::E = keycode { self.keys[0x6] = false }
+		if let Keycode::R = keycode { self.keys[0xD] = false }
+		if let Keycode::A = keycode { self.keys[0x7] = false }
+		if let Keycode::S = keycode { self.keys[0x8] = false }
+		if let Keycode::D = keycode { self.keys[0x9] = false }
+		if let Keycode::F = keycode { self.keys[0xE] = false }
+		if let Keycode::Z = keycode { self.keys[0xA] = false }
+		if let Keycode::X = keycode { self.keys[0x0] = false }
+		if let Keycode::C = keycode { self.keys[0xB] = false }
+		if let Keycode::V = keycode { self.keys[0xF] = false }
 	}
 
 	fn op_00E0(&mut self) {
@@ -246,16 +271,19 @@ impl VirtualMachine {
 	fn op_8xy1(&mut self, opcode: Opcode) {
 		// OR Vx, Vy: bitwise OR registers Vx and Vy, storing result in Vx
 		self.registers[opcode.x as usize] |= self.registers[opcode.y as usize];
+		self.registers[0xF] = 0;
 	}
 
 	fn op_8xy2(&mut self, opcode: Opcode) {
 		// AND Vx, Vy: bitwise AND registers Vx and Vy, storing result in Vx
 		self.registers[opcode.x as usize] &= self.registers[opcode.y as usize];
+		self.registers[0xF] = 0;
 	}
 
 	fn op_8xy3(&mut self, opcode: Opcode) {
 		// XOR Vx, Vy: bitwise XOR registers Vx and Vy, storing result in Vx
 		self.registers[opcode.x as usize] ^= self.registers[opcode.y as usize];
+		self.registers[0xF] = 0;
 	}
 
 	fn op_8xy4(&mut self, opcode: Opcode) {
@@ -335,8 +363,8 @@ impl VirtualMachine {
 					self.registers[0xF] = 1;
 				}
 				// do the XOR
-				// self.video_memory[video_index] ^= bit;
-				self.video_memory[video_index] = bit;
+				self.video_memory[video_index] ^= bit;
+				// self.video_memory[video_index] = bit;
 				// bitmask >>= 1;
 			}
 		}
@@ -361,15 +389,13 @@ impl VirtualMachine {
 	
 	fn op_Fx0A(&mut self, opcode: Opcode) {
 		// LD Vx, K: block until any keypress, store key in register Vx
-		'blocking: loop {
+		if self.keys.iter().any(|k| *k){
 			for (id, key) in self.keys.iter().enumerate() {
 				if *key {
 					self.registers[opcode.x as usize] = id as u8;
-					break 'blocking;
 				}
 			}
-		}
-		todo!("switch to repeating the instruction, rather than completely blocking. timers should decrement, etc.")
+		} else { self.program_counter -= 2 }
 	}
 	
 	fn op_Fx15(&mut self, opcode: Opcode) {
@@ -415,6 +441,7 @@ impl VirtualMachine {
 		for (i, reg) in self.registers[range].iter().enumerate() {
 			self.memory[self.index_register as usize + i] = *reg;
 		}
+		self.index_register += opcode.x + 1;
 	}
 	
 	fn op_Fx65(&mut self, opcode: Opcode) {
@@ -423,6 +450,7 @@ impl VirtualMachine {
 		for i in range {
 			self.registers[i] = self.memory[self.index_register as usize + i];
 		}
+		self.index_register += opcode.x + 1;
 	}
 
 	const FONT: [u8; 80] = [

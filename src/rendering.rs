@@ -1,9 +1,12 @@
+use sdl2::pixels::Color;
 use sdl2::rect::Point;
 use sdl2::render::WindowCanvas;
 use sdl2::Sdl;
 
 pub struct Renderer {
 	pub canvas: WindowCanvas,
+	foreground: Color,
+	background: Color
 }
 
 impl Renderer {
@@ -22,6 +25,8 @@ impl Renderer {
 
 		Renderer {
 			canvas,
+			foreground: Color::RGB(255, 255, 255),
+			background: Color::RGB(0, 0, 0)
 		}
 	}
 
@@ -35,7 +40,26 @@ impl Renderer {
 				points.push(point);
 			}
 		}
-
+		
+		self.canvas.set_draw_color(self.background);
+		self.canvas.clear();
+		self.canvas.set_draw_color(self.foreground);
 		let _ = self.canvas.draw_points(points.as_slice());
+		self.canvas.present()
+	}
+	
+	pub fn get_colors(&mut self, color: &str) {
+		let (fg, bg) = match color {
+			"amber" => (Color::RGB(255, 197, 0), Color::RGB(30, 18, 8)),
+			"pride" => (Color::RGB(245, 169, 184), Color::RGB(91, 206, 250)),
+			"moneybags" => (Color::RGB(239, 152, 21), Color::RGB(196, 196, 196)),
+			"mono" => (Color::WHITE, Color::BLACK),
+			_ => {
+				eprintln!("Unknown color '{}', defaulting to mono", color);
+				(Color::WHITE, Color::BLACK)
+			},
+		};
+		self.foreground = fg;
+		self.background = bg;
 	}
 }

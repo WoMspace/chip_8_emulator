@@ -7,7 +7,6 @@ use clap::Parser;
 use std::time::{Duration, Instant};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode::Insert;
 use sdl2::pixels::Color;
 use crate::rendering::Renderer;
 use crate::virtual_machine::VirtualMachine;
@@ -18,7 +17,11 @@ struct Cli {
 	#[arg(help = "the binary file to load into memory")]
 	program: std::path::PathBuf,
 	#[arg(short, long, help = "target frequency of the emulator, in Hz. emulator will run slightly slower than this.")]
-	frequency: Option<u32>
+	frequency: Option<u32>,
+	#[arg(short = 'v', long = "verbose", action = clap::ArgAction::Count, help = "print extra debug information, use multiple times for more verbosity")]
+	debug: u8,
+	#[arg(short, long, help = "colour scheme of the terminal. options are 'mono', 'amber', 'pride', 'moneybags'")]
+	colour: Option<String>
 }
 
 fn main() {
@@ -27,10 +30,14 @@ fn main() {
 	
 	let sdl_context = sdl2::init().unwrap();
 	let mut renderer = Renderer::build(&sdl_context);
-	renderer.canvas.set_draw_color(Color::RGB(91, 206, 250));
+	renderer.canvas.set_draw_color(Color::RGB(0, 0, 0));
 	renderer.canvas.clear();
+	if cli.colour.is_some() {
+		renderer.get_colors(cli.colour.unwrap().as_str());
+	}
 	
 	let mut vm = VirtualMachine::build();
+	vm.debug_level = cli.debug;
 	
 	let program = std::fs::read(cli.program);
 	let program = match program {
@@ -63,19 +70,19 @@ fn main() {
 		vm.cycle();
 		
 		if vm.update_display {
-			renderer.canvas.set_draw_color(Color::RGB(91, 206, 250));
-			renderer.canvas.clear();
-			renderer.canvas.set_draw_color(Color::RGB(245, 169, 184));
 			renderer.draw_video_memory(vm.video_memory);
 			vm.update_display = false;
-			renderer.canvas.present();
 		}
 		
 		// run at roughly target frequency
 		if do_sleep {
-			std::thread::sleep(sleep_time.saturating_sub(cycle_timer.elapsed()));
+			let mut resume = false;
+			while !resume {
+				resume = cycle_timer.elapsed() >= sleep_time;
+				// hint::spin_loop();
+			}
 			cycle_timer = Instant::now();
-		}		
+		}
 		
 		// update window title with 500ms average clock rate
 		perf_counter += 1;
@@ -92,12 +99,12 @@ fn format_frequency(freq: f64) -> String {
 	let (suffix, number) = if freq < 1_000.0 {
 		("Hz", freq)
 	} else if freq < 1_000_000.0 {
-		("KHz", freq / 1_000.0)
+		("kHz", freq / 1_000.0)
 	} else if freq < 1_000_000_000.0 {
 		("MHz", freq / 1_000_000.0)
 	} else {
 		("GHz", freq / 1_000_000_000.0)
 	};
 	
-	format!("{number:.2}{suffix}")
+	format!("{number:.2} {suffix}")
 }
