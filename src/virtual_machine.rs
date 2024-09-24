@@ -23,6 +23,8 @@ pub struct VirtualMachine {
 	last_key: Option<u8>,
 }
 
+const VERT_SYNC: Duration = Duration::from_nanos(1_000_000_000 / 60);
+
 struct Opcode {
 	pub instruction: u16,
 	pub i: u16,
@@ -217,6 +219,8 @@ impl VirtualMachine {
 
 	fn op_00E0(&mut self) {
 		// CLS: clear display
+		while self.last_draw.elapsed() < VERT_SYNC { /* wait until last draw was 1 VSYNC ago */ }
+		self.last_draw = Instant::now();
 		self.video_memory.fill(false);
 		self.update_display = true;
 	}
@@ -353,11 +357,7 @@ impl VirtualMachine {
 		// DRW Vx, Vy, nibble: display an n-byte sprite - starting at index register - at location Vx, Vy. if any pixels are XORed off, flag register VF is set to 1, otherwise 0
 		// sprite starting position should wrap, but sprites themselves should clip
 		// maximum 60 sprite draws per second
-		const VERT_SYNC: Duration = Duration::from_nanos(1_000_000_000 / 60);
-		if self.last_draw.elapsed() < VERT_SYNC {
-			// std::thread::sleep(VERT_SYNC - self.last_draw.elapsed());
-			while self.last_draw.elapsed() < VERT_SYNC {}
-		}
+		while self.last_draw.elapsed() < VERT_SYNC { /* wait until last draw was 1 VSYNC ago */ }
 		self.last_draw = Instant::now();
 		self.update_display = true;
 		let x = self.registers[opcode.x as usize] % 64;

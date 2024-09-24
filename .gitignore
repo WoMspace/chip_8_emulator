@@ -1,4 +1,5 @@
 /target
 /.idea
 /roms
+/binaries
 .DS_Store
