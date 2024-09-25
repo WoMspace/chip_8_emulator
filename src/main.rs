@@ -30,7 +30,7 @@ struct Cli {
 
 fn main() {
 	
-	let cli = Cli::parse();
+	let cli = Cli::parse();	
 	
 	let sdl_context = sdl2::init().unwrap();
 	let mut renderer = Renderer::build(&sdl_context);
@@ -57,6 +57,7 @@ fn main() {
 		Duration::new(0, 1_000_000_000 / cli.frequency.unwrap())
 	} else { Duration::ZERO	};
 
+	let mut frame_timer = Instant::now();
 	let mut perf_timer = Instant::now();
 	let mut perf_counter: u64 = 0;
 	let mut cycle_timer = Instant::now();
@@ -83,6 +84,12 @@ fn main() {
 		if vm.update_display {
 			renderer.draw_video_memory(vm.video_memory);
 			vm.update_display = false;
+		}
+		
+		if frame_timer.elapsed() > Duration::from_secs_f64(1.0 / 10.0) {
+			renderer.draw_video_memory(vm.video_memory);
+			renderer.post_fx();
+			frame_timer = Instant::now();
 		}
 		
 		// run at roughly target frequency
