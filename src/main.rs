@@ -26,10 +26,16 @@ struct Cli {
 	debug: u8,
 	#[arg(short, long, help = "colour scheme of the terminal. options are 'mono', 'amber', 'pride', 'moneybags'")]
 	colour: Option<String>,
+	#[arg(long, help = "volume for the beep")]
+	volume: Option<f32>
 }
 
 fn main() {
 	let cli = Cli::parse();
+	
+	let volume = if let Some(v) = cli.volume {
+		f32::clamp(v, 0.0, 1.0)
+	} else { 1.0 };
 	
 	let sdl_context = sdl3::init().unwrap();
 	let audio_subsystem = sdl_context.audio().unwrap();
@@ -41,7 +47,7 @@ fn main() {
 		renderer.get_colors(cli.colour.unwrap().as_str());
 	}
 	
-	let mut audio_player = AudioPlayer::build(audio_subsystem);
+	let mut audio_player = AudioPlayer::build(audio_subsystem, volume);
 	
 	let mut vm = VirtualMachine::build();
 	vm.debug_level = cli.debug;

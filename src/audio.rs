@@ -30,7 +30,7 @@ pub struct AudioPlayer {
 }
 
 impl AudioPlayer {
-	pub fn build(audio_subsystem: AudioSubsystem) -> AudioPlayer {
+	pub fn build(audio_subsystem: AudioSubsystem, volume: f32) -> AudioPlayer {
 		let desired_spec = AudioSpec {
 			freq: Some(48000),
 			channels: Some(1),
@@ -40,7 +40,7 @@ impl AudioPlayer {
     SquareWave {
 				phase_inc: 440.0 / desired_spec.freq.unwrap() as f32,
 				phase : 0.0,
-				volume: 0.1
+				volume: 0.1 * volume
 			}).unwrap();
 		
 		AudioPlayer { stream }
