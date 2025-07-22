@@ -3,7 +3,7 @@
 use std::time::{Duration, Instant};
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
-use sdl2::keyboard::Keycode;
+use sdl3::keyboard::Keycode;
 
 pub struct VirtualMachine {
 	memory: [u8; 4096],
@@ -180,10 +180,10 @@ impl VirtualMachine {
 	}
 
 	pub fn handle_keydown(&mut self, keycode: Keycode) {
-		if let Keycode::Num1 = keycode { self.keys[0x1] = true	}
-		if let Keycode::Num2 = keycode { self.keys[0x2] = true	}
-		if let Keycode::Num3 = keycode { self.keys[0x3] = true	}
-		if let Keycode::Num4 = keycode { self.keys[0xC] = true	}
+		if let Keycode::_1 = keycode { self.keys[0x1] = true	}
+		if let Keycode::_2 = keycode { self.keys[0x2] = true	}
+		if let Keycode::_3 = keycode { self.keys[0x3] = true	}
+		if let Keycode::_4 = keycode { self.keys[0xC] = true	}
 		if let Keycode::Q = keycode { self.keys[0x4] = true	}
 		if let Keycode::W = keycode { self.keys[0x5] = true	}
 		if let Keycode::E = keycode { self.keys[0x6] = true	}
@@ -199,10 +199,10 @@ impl VirtualMachine {
 	}
 
 	pub fn handle_keyup(&mut self, keycode: Keycode) {
-		if let Keycode::Num1 = keycode { self.keys[0x1] = false }
-		if let Keycode::Num2 = keycode { self.keys[0x2] = false }
-		if let Keycode::Num3 = keycode { self.keys[0x3] = false }
-		if let Keycode::Num4 = keycode { self.keys[0xC] = false }
+		if let Keycode::_1 = keycode { self.keys[0x1] = false }
+		if let Keycode::_2 = keycode { self.keys[0x2] = false }
+		if let Keycode::_3 = keycode { self.keys[0x3] = false }
+		if let Keycode::_4 = keycode { self.keys[0xC] = false }
 		if let Keycode::Q = keycode { self.keys[0x4] = false }
 		if let Keycode::W = keycode { self.keys[0x5] = false }
 		if let Keycode::E = keycode { self.keys[0x6] = false }

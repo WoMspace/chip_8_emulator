@@ -1,9 +1,9 @@
 // Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
 
-use sdl2::pixels::Color;
-use sdl2::rect::Point;
-use sdl2::render::WindowCanvas;
-use sdl2::Sdl;
+use sdl3::pixels::Color;
+use sdl3::rect::Point;
+use sdl3::render::{FPoint, WindowCanvas};
+use sdl3::Sdl;
 
 pub struct Renderer {
 	pub canvas: WindowCanvas,
@@ -16,14 +16,11 @@ impl Renderer {
 		let video_subsystem = sdl_context.video().unwrap();
 		let window = video_subsystem
 			.window("CHIP-8", 1280, 640)
-			.position_centered()
+			// .position_centered()
 			.build()
 			.unwrap();
-		let mut canvas = window.into_canvas()
-			.accelerated()
-			.build()
-			.unwrap();
-		let _ = canvas.set_logical_size(64, 32);
+		let mut canvas = window.into_canvas();
+		let _ = canvas.set_logical_size(64, 32, sdl3::sys::render::SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
 		Renderer {
 			canvas,
@@ -33,13 +30,13 @@ impl Renderer {
 	}
 
 	pub fn draw_video_memory(&mut self, video_buffer: [bool; 2048]) {
-		let mut points: Vec<Point> = Vec::with_capacity(2048);
+		let mut points: Vec<FPoint> = Vec::with_capacity(2048);
 		for (i, pixel) in video_buffer.iter().enumerate() {
 			if *pixel {
 				let x = (i % 64) as i32;
 				let y = (i / 64) as i32;
 				let point = Point::new(x, y);
-				points.push(point);
+				points.push(point.into());
 			}
 		}
 		
@@ -47,7 +44,7 @@ impl Renderer {
 		self.canvas.clear();
 		self.canvas.set_draw_color(self.foreground);
 		let _ = self.canvas.draw_points(points.as_slice());
-		self.canvas.present()
+		let _ = self.canvas.present();
 	}
 	
 	pub fn get_colors(&mut self, color: &str) {

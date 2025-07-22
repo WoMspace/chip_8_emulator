@@ -14,4 +14,4 @@ lto = true
 [dependencies]
 clap = { version = "4.5.17", features = ["derive"] }
 rand = "0.8.5"
-sdl2 = { version = "0.37.0", features = ["bundled", "static-link"] }
+sdl3 = { version = "0.14.36", features = ["build-from-source-static"] }

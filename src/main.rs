@@ -4,13 +4,13 @@ mod rendering;
 mod virtual_machine;
 mod audio;
 
-extern crate sdl2;
+extern crate sdl3;
 
 use clap::Parser;
 use std::time::{Duration, Instant};
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
+use sdl3::pixels::Color;
 use crate::audio::AudioPlayer;
 use crate::rendering::Renderer;
 use crate::virtual_machine::VirtualMachine;
@@ -25,14 +25,15 @@ struct Cli {
 	#[arg(short = 'v', long = "verbose", action = clap::ArgAction::Count, help = "print extra debug information, use multiple times for more verbosity")]
 	debug: u8,
 	#[arg(short, long, help = "colour scheme of the terminal. options are 'mono', 'amber', 'pride', 'moneybags'")]
-	colour: Option<String>
+	colour: Option<String>,
 }
 
 fn main() {
-	
 	let cli = Cli::parse();
 	
-	let sdl_context = sdl2::init().unwrap();
+	let sdl_context = sdl3::init().unwrap();
+	let audio_subsystem = sdl_context.audio().unwrap();
+	
 	let mut renderer = Renderer::build(&sdl_context);
 	renderer.canvas.set_draw_color(Color::RGB(0, 0, 0));
 	renderer.canvas.clear();
@@ -40,7 +41,7 @@ fn main() {
 		renderer.get_colors(cli.colour.unwrap().as_str());
 	}
 	
-	let mut audio_player = AudioPlayer::build(&sdl_context);
+	let mut audio_player = AudioPlayer::build(audio_subsystem);
 	
 	let mut vm = VirtualMachine::build();
 	vm.debug_level = cli.debug;
