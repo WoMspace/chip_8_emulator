@@ -1,19 +1,17 @@
 // Copyright (C) 2024 Sasha (WoMspace), All Rights Reserved
 
+extern crate sdl3;
 mod rendering;
 mod virtual_machine;
 mod audio;
 
-extern crate sdl3;
-
-use clap::Parser;
-use std::time::{Duration, Instant};
-use sdl3::event::Event;
-use sdl3::keyboard::Keycode;
-use sdl3::pixels::Color;
 use crate::audio::AudioPlayer;
 use crate::rendering::Renderer;
 use crate::virtual_machine::VirtualMachine;
+use clap::Parser;
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
+use std::time::{Duration, Instant};
 
 #[derive(Parser)]
 #[command(version, about = "CHIP-8 Emulator written in rust", long_about = None)]
@@ -24,7 +22,7 @@ struct Cli {
 	frequency: Option<u32>,
 	#[arg(short = 'v', long = "verbose", action = clap::ArgAction::Count, help = "print extra debug information, use multiple times for more verbosity")]
 	debug: u8,
-	#[arg(short, long, help = "colour scheme of the terminal. options are 'mono', 'amber', 'pride', 'moneybags'")]
+	#[arg(short, long, help = "colour scheme of the terminal. options are 'mono', 'inverted', 'amber', 'pride', 'moneybags'")]
 	colour: Option<String>,
 	#[arg(long, help = "volume for the beep")]
 	volume: Option<f32>
@@ -41,8 +39,6 @@ fn main() {
 	let audio_subsystem = sdl_context.audio().unwrap();
 	
 	let mut renderer = Renderer::build(&sdl_context);
-	renderer.canvas.set_draw_color(Color::RGB(0, 0, 0));
-	renderer.canvas.clear();
 	if cli.colour.is_some() {
 		renderer.get_colors(cli.colour.unwrap().as_str());
 	}
@@ -88,7 +84,7 @@ fn main() {
 		}
 		
 		if vm.update_display {
-			renderer.draw_video_memory(vm.video_memory);
+			renderer.gpu_draw(&vm.video_memory);
 			vm.update_display = false;
 		}
 		
@@ -105,7 +101,7 @@ fn main() {
 		perf_counter += 1;
 		if perf_timer.elapsed().as_millis() > 500 {
 			let freq = perf_counter as f64 / perf_timer.elapsed().as_secs_f64();
-			renderer.canvas.window_mut().set_title(format!("CHIP-8 | {}", format_frequency(freq)).as_str()).unwrap();
+			renderer.window.set_title(format!("CHIP-8 | {}", format_frequency(freq)).as_str()).unwrap();
 			perf_counter = 0;
 			perf_timer = Instant::now();
 		}
